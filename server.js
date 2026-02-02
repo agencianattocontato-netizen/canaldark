@@ -7,12 +7,11 @@ const http = require('http');
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
-app.use(express.text({ limit: '50mb' }));
 
 app.get('/', (req, res) => {
   res.json({ 
     status: 'FFmpeg Video API Online', 
-    version: '1.0.0',
+    version: '1.1.0',
     endpoints: {
       'POST /create-video': 'Create video from images + audio + srt'
     }
@@ -46,17 +45,26 @@ app.post('/create-video', async (req, res) => {
         const file = fs.createWriteStream(dest);
         
         protocol.get(url, (response) => {
-          if (response.statusCode === 302 || response.statusCode === 301) {
+          // Trata TODOS os tipos de redirect (301, 302, 303, 307, 308)
+          if (response.statusCode >= 300 && response.statusCode < 400) {
             file.close();
-            fs.unlinkSync(dest);
-            downloadFile(response.headers.location, dest).then(resolve).catch(reject);
+            if (fs.existsSync(dest)) fs.unlinkSync(dest);
+            
+            const redirectUrl = response.headers.location;
+            if (!redirectUrl) {
+              reject(new Error(`Redirect sem location header (${response.statusCode})`));
+              return;
+            }
+            
+            console.log(`  Redirect ${response.statusCode}: ${redirectUrl.substring(0, 50)}...`);
+            downloadFile(redirectUrl, dest).then(resolve).catch(reject);
             return;
           }
           
           if (response.statusCode !== 200) {
             file.close();
-            fs.unlinkSync(dest);
-            reject(new Error(`HTTP ${response.statusCode}`));
+            if (fs.existsSync(dest)) fs.unlinkSync(dest);
+            reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage || 'Unknown error'}`));
             return;
           }
           
@@ -65,7 +73,10 @@ app.post('/create-video', async (req, res) => {
             file.close();
             resolve();
           });
-        }).on('error', reject);
+        }).on('error', (err) => {
+          if (fs.existsSync(dest)) fs.unlinkSync(dest);
+          reject(err);
+        });
       });
     };
 
@@ -129,6 +140,6 @@ app.post('/create-video', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🎬 FFmpeg Video API running on port ${PORT}`);
+  console.log(`🎬 FFmpeg Video API v1.1.0 running on port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/`);
 });
