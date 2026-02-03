@@ -94,7 +94,7 @@ app.post('/create-video', async (req, res) => {
 
     console.log('[4/8] Creating title screen...');
     const titleSafe = title.replace(/'/g, "'\\''");
-    execSync(`ffmpeg -y -f lavfi -i color=c=black:s=1920x1080:d=4 -vf "drawtext=text='⚠️ ${titleSafe} ⚠️':fontsize=80:fontcolor=red:x=(w-text_w)/2:y=(h-text_h)/2:borderw=4:bordercolor=black" -c:v libx264 -preset ultrafast -pix_fmt yuv420p ${workDir}/title.mp4`);
+    execSync(`ffmpeg -y -f lavfi -i color=c=black:s=1920x1080:d=4 -vf "drawtext=fontfile=/usr/share/fonts/ttf-dejavu/DejaVuSans-Bold.ttf:text='⚠️ ${titleSafe} ⚠️':fontsize=80:fontcolor=red:x=(w-text_w)/2:y=(h-text_h)/2:borderw=4:bordercolor=black" -c:v libx264 -preset ultrafast -pix_fmt yuv420p ${workDir}/title.mp4`);
 
     console.log('[5/8] Creating slideshow...');
     const imageList = images.map((_, i) => `file 'img_${String(i).padStart(3, '0')}.jpg'\nduration 8`).join('\n') + `\nfile 'img_${String(images.length - 1).padStart(3, '0')}.jpg'`;
